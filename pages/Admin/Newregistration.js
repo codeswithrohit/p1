@@ -60,6 +60,11 @@ const Newregistration = () => {
     const handleChange = (e, index) => {
         const { name, value } = e.target;
 
+        if ((name === 'whatsappNumber' || name === 'callingNumber') && !/^\d{0,10}$/.test(value)) {
+            toast.error('Please enter a valid 10-digit number.');
+            return;
+        }
+
         if (name === 'subjectName' || name === 'totalFees') {
             const updatedSubjects = [...formData.subjects];
             updatedSubjects[index][name] = value;
@@ -297,27 +302,34 @@ const Newregistration = () => {
                                 </div>
 
                                 <div className="mb-4">
-                                    <input
-                                        type="text"
-                                        name="whatsappNumber"
-                                        required
-                                        value={formData.whatsappNumber}
-                                        onChange={handleChange}
-                                        placeholder="WhatsApp Number"
-                                        className="w-full py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                                    />
+                                <input
+    type="tel"
+    name="whatsappNumber"
+    value={formData.whatsappNumber}
+    required
+    onChange={handleChange}
+    placeholder="WhatsApp Number"
+    className="w-30 mr-2 py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+    pattern="[0-9]{10}"
+    title="Please enter a 10-digit Whatsapp number"
+/>
+
                                 </div>
 
                                 <div className="mb-4">
+                                   
                                     <input
-                                        type="text"
-                                        name="callingNumber"
+    type="tel"
+    name="callingNumber"
                                         required
                                         value={formData.callingNumber}
                                         onChange={handleChange}
                                         placeholder="Calling Number"
-                                        className="w-full py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                                    />
+    className="w-30 mr-2 py-2 px-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+    pattern="[0-9]{10}"
+    title="Please enter a 10-digit phone number"
+/>
+
                                 </div>
 
                                 <div className="mb-4">
