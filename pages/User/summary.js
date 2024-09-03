@@ -3,7 +3,10 @@ import { firebase } from '../../Firebase/config';
 
 const Summary = ({ userdata }) => {
   const [studentData, setStudentData] = useState([]);
-  const [filteredData, setFilteredData] = useState({ result: [], totalCollection: { totalCash: 0, totalOnline: 0 } });
+  const [filteredData, setFilteredData] = useState({
+    result: [],
+    totalCollection: { totalCash: 0, totalOnline: 0 },
+  });
   const [loading, setLoading] = useState(true);
 
   const now = new Date();
@@ -43,9 +46,7 @@ const Summary = ({ userdata }) => {
                 return column.received === userdata[0].name && !isNaN(formattedDate.getTime()) && isWithinRange;
               });
 
-              return filteredColumns?.length > 0
-                ? { ...subject, columns: filteredColumns }
-                : null;
+              return filteredColumns?.length > 0 ? { ...subject, columns: filteredColumns } : null;
             }).filter(subject => subject !== null); // Remove null entries
 
             // Add student to data if there are any filtered subjects with valid columns
@@ -74,8 +75,8 @@ const Summary = ({ userdata }) => {
   useEffect(() => {
     // Filter data when studentData changes
     if (studentData.length > 0) {
-      const result = studentData.flatMap(student => 
-        student.subjects.flatMap(subject => 
+      const result = studentData.flatMap(student =>
+        student.subjects.flatMap(subject =>
           subject.columns.map(column => ({
             subjectName: subject.subjectName,
             amount: column.amount,
@@ -85,24 +86,46 @@ const Summary = ({ userdata }) => {
         )
       );
 
-      const totalCollection = result.reduce((acc, curr) => {
-        if (curr.mode === 'Cash') {
-          acc.totalCash += parseFloat(curr.amount);
-        } else if (curr.mode === 'Online') {
-          acc.totalOnline += parseFloat(curr.amount);
+      const mergedResult = result.reduce((acc, curr) => {
+        const existing = acc.find(item => item.subjectName === curr.subjectName);
+
+        if (existing) {
+          // Merge amounts based on mode
+          if (curr.mode === 'Cash') {
+            existing.cash += parseFloat(curr.amount);
+          } else if (curr.mode === 'Online') {
+            existing.online += parseFloat(curr.amount);
+          }
+        } else {
+          // Add a new entry for this subject
+          acc.push({
+            subjectName: curr.subjectName,
+            cash: curr.mode === 'Cash' ? parseFloat(curr.amount) : 0,
+            online: curr.mode === 'Online' ? parseFloat(curr.amount) : 0,
+          });
         }
+
         return acc;
-      }, { totalCash: 0, totalOnline: 0 });
+      }, []);
+
+      const totalCollection = mergedResult.reduce(
+        (acc, curr) => {
+          acc.totalCash += curr.cash;
+          acc.totalOnline += curr.online;
+          return acc;
+        },
+        { totalCash: 0, totalOnline: 0 }
+      );
 
       setFilteredData({
-        result,
-        totalCollection
+        result: mergedResult,
+        totalCollection,
       });
 
       // Log filteredData to see the structure
       console.log('filteredData', {
-        result: result,
-        totalCollection: totalCollection
+        result: mergedResult,
+        totalCollection: totalCollection,
       });
     } else {
       setFilteredData({ result: [], totalCollection: { totalCash: 0, totalOnline: 0 } });
@@ -118,57 +141,35 @@ const Summary = ({ userdata }) => {
       <div className="bg-gradient-to-b from-sky-400 to-white">
         <h1 className="text-xl font-bold mb-4 font-mono text-center">Subject Wise Summary</h1>
       </div>
-      
+
       <div className='p-6'>
+        <div className='flex gap-8'>
+          <div className="mb-4">
+            <label htmlFor="start-time" className="block text-sm font-mono font-medium text-gray-700">Start Time</label>
+            <input
+              type="time"
+              id="start-time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="mt-1 block w-full font-mono"
+            />
+          </div>
 
-        <div className='flex gap-8' >
-        {/* <div className="mb-4">
-          <label htmlFor="start-date" className="block text-sm font-medium text-gray-700">Start Date</label>
-          <input
-            type="date"
-            id="start-date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="mt-1 block w-full"
-          />
-        </div> */}
+          <div className="mb-4">
+            <label htmlFor="end-time" className="block text-sm font-mono font-medium text-gray-700">End Time</label>
+            <input
+              type="time"
+              id="end-time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="mt-1 block w-full font-mono"
+            />
+          </div>
+        </div>
 
-        <div className="mb-4">
-          <label htmlFor="start-time" className="block text-sm font-mono font-medium text-gray-700">Start Time</label>
-          <input
-            type="time"
-            id="start-time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="mt-1 block w-full font-mono"
-          />
-        </div>
-{/* 
-        <div className="mb-4">
-          <label htmlFor="end-date" className="block text-sm font-medium text-gray-700">End Date</label>
-          <input
-            type="date"
-            id="end-date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="mt-1 block w-full"
-          />
-        </div> */}
-
-        <div className="mb-4">
-          <label htmlFor="end-time" className="block text-sm font-mono font-medium text-gray-700">End Time</label>
-          <input
-            type="time"
-            id="end-time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            className="mt-1 block w-full font-mono"
-          />
-        </div>
-        </div>
-        <div className="mb-4 flex flex-col ">
-          <h1 className='font-bold font-mono' >Total Collection in Cash: {filteredData.totalCollection.totalCash}</h1>
-          <h1 className='font-bold font-mono' >Total Collection in Online: {filteredData.totalCollection.totalOnline}</h1>
+        <div className="mb-4 flex flex-col">
+          <h1 className='font-bold font-mono'>Total Collection in Cash: {filteredData.totalCollection.totalCash}</h1>
+          <h1 className='font-bold font-mono'>Total Collection in Online: {filteredData.totalCollection.totalOnline}</h1>
         </div>
 
         <table className="min-w-full bg-white border border-gray-800">
@@ -183,8 +184,8 @@ const Summary = ({ userdata }) => {
             {filteredData.result.map((data, index) => (
               <tr key={index}>
                 <td className="border-b border-gray-800 px-4 py-2 text-sm text-center font-mono">{data.subjectName}</td>
-                <td className="border-b border-gray-800 px-4 py-2 text-sm text-center font-mono">₹{data.mode === 'Cash' ? data.amount : '0'}</td>
-                <td className="border-b border-gray-800 px-4 py-2 text-sm text-center font-mono">₹{data.mode === 'Online' ? data.amount : '0'}</td>
+                <td className="border-b border-gray-800 px-4 py-2 text-sm text-center font-mono">₹{data.cash}</td>
+                <td className="border-b border-gray-800 px-4 py-2 text-sm text-center font-mono">₹{data.online}</td>
               </tr>
             ))}
           </tbody>

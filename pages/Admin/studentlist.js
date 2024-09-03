@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { firebase } from '../../Firebase/config';
-import { FaSearch, FaUserPlus } from 'react-icons/fa';
+import { FaSearch, FaUserPlus,FaTrash } from 'react-icons/fa';
 import { FaDownload, FaEye } from 'react-icons/fa';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { toast, ToastContainer } from 'react-toastify'; // Import Toastify for notifications
+import 'react-toastify/dist/ReactToastify.css'; // Import Toastify CSS
 const Header = () => {
   return (
     <div className="bg-blue-500 p-4">
@@ -15,16 +17,8 @@ const Header = () => {
   );
 };
 
-const Student = ({ studentData }) => {
-  const handleDownload = (url, name) => {
-    // Create a link element
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${name}.png`; // Set filename with student first name
-    document.body.appendChild(link); // Append link to body
-    link.click(); // Trigger click
-    document.body.removeChild(link); // Remove link from body
-  };
+const Student = ({ studentData,onDelete }) => {
+
 
 
   const getBackgroundColor = (subject) => {
@@ -48,7 +42,11 @@ const Student = ({ studentData }) => {
       return 'bg-gray-300'; // Default color for cases where data is missing
     }
   };
-
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this student?')) {
+      onDelete(studentData.id);
+    }
+  };
   return (
     <div className="flex items-center mb-4">
       <img src={studentData.imageUrl} className='h-16 w-16 rounded-full object-contain mr-8' />
@@ -68,15 +66,12 @@ const Student = ({ studentData }) => {
         </div>
       </Link>
       <div className="ml-auto flex space-x-4">
-      
-
-        {/* <button
-          onClick={() => handleDownload(studentData.qrCodeUrl, studentData.firstName)}
-          className="flex items-center bg-blue-500 text-white p-2 rounded"
+        <button
+          onClick={handleDelete}
+          className="text-red-500 hover:text-red-700"
         >
-          <FaDownload className="mr-2" /> 
-        </button> */}
-       
+          <FaTrash size={20} />
+        </button>
       </div>
     </div>
   );
@@ -100,22 +95,50 @@ function Studentlist() {
         if (!snapshot.empty) {
           let data = [];
           snapshot.forEach((doc) => {
-            data.push(doc.data());
+            data.push({ id: doc.id, ...doc.data() });
           });
           setStudentdata(data);
-          setLoading(false);
         } else {
           console.log('No documents in the collection!');
-          setLoading(false);
         }
       } catch (error) {
         console.error('Error getting documents:', error);
+      } finally {
         setLoading(false);
       }
     };
 
     fetchData();
   }, []);
+  const handleDelete = async (id) => {
+    console.log("id", id);
+    try {
+      const db = firebase.firestore();
+      
+      // Query documents with the matching ID
+      const querySnapshot = await db.collection('registrations')
+                                   .where("id", "==", id)
+                                   .get();
+      
+      if (!querySnapshot.empty) {
+        // Iterate through matching documents and delete them
+        querySnapshot.forEach(async (doc) => {
+          await doc.ref.delete(); // Use doc.ref to get the document reference
+        });
+  
+        // Update local state
+        setStudentdata(studentdata.filter(student => student.id !== id));
+        toast.success('Student deleted successfully');
+      } else {
+        toast.error('No matching student found');
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast.error('Failed to delete student');
+    }
+  };
+  
+
 
  
   const [searchTerm, setSearchTerm] = useState('');
@@ -150,7 +173,7 @@ function Studentlist() {
      </div>
       ) : (
         <div>
-       <div className="container mx-auto p-4">
+       <div className="container mx-auto mb-40 p-4">
           {/* Search input for filtering students */}
           <div className="flex items-center bg-gray-200 p-2 rounded-md mb-4">
             <FaSearch className="mr-2" />
@@ -164,7 +187,7 @@ function Studentlist() {
           </div>
           {/* Display filtered students */}
           {filteredStudents.map((student, index) => (
-            <Student key={index} studentData={student} />
+            <Student key={student.id} studentData={student} onDelete={handleDelete} />
           ))}
         </div>
 
@@ -175,6 +198,7 @@ function Studentlist() {
       </div>
       </div>
       )}
+      <ToastContainer/>
     </div>
   );
 }

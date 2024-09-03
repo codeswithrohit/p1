@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { firebase } from '../Firebase/config';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import moment from 'moment';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
 
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
 const TransactionRecordPage = () => {
+  const [selectedSubjects, setSelectedSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState('');
   const [subjects, setSubjects] = useState([]);
   const [selectedMode, setSelectedMode] = useState('');
@@ -50,6 +52,13 @@ const TransactionRecordPage = () => {
 
     fetchRegistrationData();
   }, []);
+  const handleSubjectChange = (subjectName) => {
+    setSelectedSubjects((prevSelected) =>
+      prevSelected.includes(subjectName)
+        ? prevSelected.filter((subject) => subject !== subjectName)
+        : [...prevSelected, subjectName]
+    );
+  };
 
   useEffect(() => {
     const filterData = () => {
@@ -59,13 +68,12 @@ const TransactionRecordPage = () => {
       console.log('Initial Registration Data:', data);
 
       // Filter by selected subject
-      if (selectedSubject) {
+      if (selectedSubjects.length > 0) {
         data = data.map((student) => ({
           ...student,
-          subjects: student.subjects.filter((subject) => subject.subjectName === selectedSubject),
+          subjects: student.subjects.filter((subject) => selectedSubjects.includes(subject.subjectName)),
         })).filter((student) => student.subjects.length > 0);
       }
-
       // Log data after subject filtering
       console.log('Data After Subject Filtering:', data);
 
@@ -116,19 +124,19 @@ const TransactionRecordPage = () => {
 
 
       const receivedTotals = {};
-      data.forEach((student) => {
-        student.subjects.forEach((subject) => {
-          if (subject.columns && Array.isArray(subject.columns)) {
-            subject.columns.forEach((column) => {
-              if (receivedTotals[column.received]) {
-                receivedTotals[column.received] += parseFloat(column.amount);
-              } else {
-                receivedTotals[column.received] = parseFloat(column.amount);
-              }
-            });
+  data.forEach((student) => {
+    student.subjects.forEach((subject) => {
+      if (subject.columns && Array.isArray(subject.columns)) {
+        subject.columns.forEach((column) => {
+          if (!receivedTotals[column.received]) {
+            receivedTotals[column.received] = { Cash: 0, Online: 0, Total: 0 };
           }
+          receivedTotals[column.received][column.mode] += parseFloat(column.amount);
+          receivedTotals[column.received].Total += parseFloat(column.amount);
         });
-      });
+      }
+    });
+  });
 
       setReceivedTotals(receivedTotals);
       
@@ -144,96 +152,150 @@ const TransactionRecordPage = () => {
     setFilteredData(data);
     setIsDataVisible(data.length > 0);
 
+ 
     const calculateTotalCollection = (data, mode) => {
       return data.reduce((total, student) => {
-        const subjectData = student.subjects?.find((subject) => subject.subjectName === selectedSubject);
-        if (subjectData && subjectData.columns) {
-          const payments = mode === 'All'
-            ? subjectData.columns
-            : subjectData.columns.filter((column) => column.mode === mode);
-          const totalAmount = payments.reduce((acc, column) => acc + parseFloat(column.amount || 0), 0);
-          return total + totalAmount;
-        }
+        student.subjects.forEach((subject) => {
+          if (subject.columns) {
+            const payments = mode === 'All'
+              ? subject.columns
+              : subject.columns.filter((column) => column.mode === mode);
+            const totalAmount = payments.reduce((acc, column) => acc + parseFloat(column.amount || 0), 0);
+            total += totalAmount;
+          }
+        });
         return total;
       }, 0);
     };
 
-    let totalOnline = 0;
-    let totalOffline = 0;
-
-    if (selectedMode === 'All' || selectedMode === '') {
-      totalOnline = calculateTotalCollection(data, 'Online');
-      totalOffline = calculateTotalCollection(data, 'Cash');
-    } else {
-      totalOnline = calculateTotalCollection(data, 'Online');
-      totalOffline = calculateTotalCollection(data, 'Cash');
-    }
-
+    let totalOnline = calculateTotalCollection(data, 'Online');
+    let totalOffline = calculateTotalCollection(data, 'Cash');
     const totalBalance = totalOnline + totalOffline;
 
     setTotalCollectionOnline(totalOnline);
     setTotalCollectionOffline(totalOffline);
     setRemainingBalance(totalBalance);
-  }, [selectedSubject, selectedMode, registrationData, fromDateTime, toDateTime]);
+  }, [selectedSubject, selectedSubjects, selectedMode, registrationData, fromDateTime, toDateTime]);
 
 
-  const downloadPDF = () => {
-    const input = document.getElementById('pdfTable2');
-    html2canvas(input).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = canvas.height * imgWidth / canvas.width; // Calculate height to maintain aspect ratio
-
-      // Check if the content height fits within one page
-      const pageHeight = 295; // A4 height in mm
-      if (imgHeight <= pageHeight) {
-        // Add the image to a single page
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      } else {
-        // Scale down the image to fit within one page
-        const scale = pageHeight / imgHeight;
-        const newImgWidth = imgWidth * scale;
-        const newImgHeight = imgHeight * scale;
-
-        // Add the scaled image to the page
-        pdf.addImage(imgData, 'PNG', 0, 0, newImgWidth, newImgHeight);
-      }
-
-      const now = moment().format('DD/MM/YYYY HH:mm:ss');
-      const fileName = `transaction-record-${now}.pdf`;
-
-      pdf.save(fileName);
-    });
+  const downloadPdf = () => {
+    // Get the current date and time to include in the file name
+    const currentDate = new Date();
+    const formattedDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+    const formattedTime = `${String(currentDate.getHours()).padStart(2, '0')}-${String(currentDate.getMinutes()).padStart(2, '0')}`;
+    const fileName = `Transaction_Record_${formattedDate}_${formattedTime}.pdf`;
+  
+    const docDefinition = {
+      pageMargins: [40, 60, 40, 60], // Added margins for better layout
+      content: [
+        {
+          text: `Account Statement From ${fromDateTime} to ${toDateTime}`,
+          style: 'header',
+        },
+        {
+          columns: [
+            {
+              width: '50%',
+              text: `Total Collection Cash: ₹${totalCollectionOffline}`,
+              margin: [0, 10, 0, 10], // Added margin for spacing
+            },
+            {
+              width: '50%',
+              text: `Total Collection Online: ₹${totalCollectionOnline}`,
+              margin: [0, 10, 0, 10], // Added margin for spacing
+            },
+          ],
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['20%', '20%', '16%', '20%', '10%', '16%'],
+            body: [
+              [
+                { text: 'Date and Time', bold: true, fillColor: '#f3f3f3', margin: [0, 5, 0, 5] },
+                { text: 'Student Name', bold: true, fillColor: '#f3f3f3', margin: [0, 5, 0, 5] },
+                { text: 'Subject', bold: true, fillColor: '#f3f3f3', margin: [0, 5, 0, 5] },
+                { text: 'Payment Mode',fontSize:12, bold: true, fillColor: '#f3f3f3', margin: [0, 5, 0, 5] },
+                { text: 'Amount', bold: true, fillColor: '#f3f3f3', margin: [0, 5, 0, 5] },
+                { text: 'Received By', bold: true, fillColor: '#f3f3f3', margin: [0, 5, 0, 5] },
+              ],
+              ...filteredData.flatMap((student) =>
+                student.subjects.flatMap((subject) =>
+                  (subject.columns || []).map((column) => [
+                    { text: column.date, margin: [0, 2, 0, 2] },
+                    { text: `${student.firstName} ${student.middleName} ${student.lastName}`, margin: [0, 2, 0, 2] },
+                    { text: subject.subjectName, margin: [0, 2, 0, 2] },
+                    { text: column.mode, margin: [0, 2, 0, 2] },
+                    { text: `₹${column.amount}`, margin: [0, 2, 0, 2] },
+                    { text: column.received, margin: [0, 2, 0, 2] },
+                  ])
+                )
+              ),
+            ],
+            margin: [0, 10, 0, 10], // Margin around the table
+          },
+        },
+        {
+          text: `Total Collection: ₹${remainingBalance}`,
+          margin: [0, 20, 0, 0],
+          bold: true,
+          alignment: 'right', // Align to the right for better presentation
+        },
+        {
+          text: 'Received Totals By User:',
+          style: 'subheader',
+          margin: [0, 10, 0, 5],
+        },
+        ...Object.entries(receivedTotals).map(([recipient, totals]) => ({
+          text: `${recipient}: Cash: ₹${totals.Cash}, Online: ₹${totals.Online}, Total: ₹${totals.Total}`,
+          margin: [0, 5, 0, 5], // Margin for spacing between lines
+        })),
+      ],
+      styles: {
+        header: {
+          fontSize: 16,
+          bold: true,
+          margin: [0, 0, 0, 20], // Top margin for spacing after header
+          alignment: 'center', // Center align header text
+        },
+        subheader: {
+          fontSize: 14,
+          bold: true,
+          margin: [0, 10, 0, 10],
+        },
+      },
+    };
+  
+    // Download the PDF with the dynamic filename
+    pdfMake.createPdf(docDefinition).download(fileName);
   };
+  
+  
+  
 
   return (
     <div className="flex min-h-screen bg-white dark:bg-white">
       <div  className="p-8 overflow-x-auto">
         <div className='flex gap-4' >
         <div className="mb-4">
-          <label className="block mb-2" htmlFor="subjectSelect">
-            Select Subject:
-          </label>
-          <select
-            id="subjectSelect"
-            className="border border-gray-300 rounded px-4 py-2"
-            onChange={(e) => setSelectedSubject(e.target.value)}
-            value={selectedSubject}
-          >
-            <option value="">Select a Subject</option>
-            {subjects.map(sub => (
-              <option key={sub.id} value={sub.name}>
-                {sub.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            {/* Multi-select for Subjects */}
+            <div className="border border-gray-300 rounded px-4 py-2">
+              <div>Select Subjects:</div>
+              {subjects.map((subject) => (
+                <div key={subject.id} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedSubjects.includes(subject.name)}
+                    onChange={() => handleSubjectChange(subject.name)}
+                    className="mr-2"
+                  />
+                  <label>{subject.name}</label>
+                </div>
+              ))}
+            </div>
+          </div>
 
         <div className="mb-4">
-          <label className="block mb-2" htmlFor="modeSelect">
-            Select Mode:
-          </label>
           <select
             id="modeSelect"
             className="border border-gray-300 rounded px-4 py-2"
@@ -275,11 +337,12 @@ const TransactionRecordPage = () => {
         </div>
         </div>
 
-        {isDataVisible && (
+        {/* {isDataVisible && (
           <>
-             <div className='mb-20' >
+             <div   className='  mb-20' >
 
-              <div id="pdfTable2" >
+<div className='' >
+              <div  >
             <h1 className='font-bold font-mono text-sm mb-4 text-black' >Account Statement From {fromDateTime} to {toDateTime} </h1>
             <div className="flex mb-4">
           <div className="flex-1">
@@ -328,30 +391,37 @@ const TransactionRecordPage = () => {
 
             </div>
             <div className="flex-1 mt-2">
-            <h1 className="font-bold font-mono text-sm mb-4 text-black">Received Totals:</h1>
-            <ul className="list-disc ml-5">
-              {Object.entries(receivedTotals).map(([receivedBy, totalAmount], index) => (
-                <li key={index} className="font-mono text-xs text-black">
-                  {receivedBy}: ₹{totalAmount}
-                </li>
-              ))}
-            </ul>
+            <h1 className="font-bold font-mono text-sm mb-4 text-black">Received Totals By User:</h1>
+            <div className="mt-4">
+          {Object.entries(receivedTotals).map(([recipient, totals]) => (
+            <div key={recipient} className="mb-2">
+              <p><strong>{recipient}:</strong></p>
+              <p>Cash: {totals.Cash}</p>
+              <p>Online: {totals.Online}</p>
+              <p>Total: {totals.Total}</p>
+            </div>
+          ))}
+        </div>
           <h2 className="font-semibold mb-2 mr-4">Total Collection:</h2>
           <p className="border border-gray-300 rounded p-2">{remainingBalance}</p>
         </div>
         </div>
-
-            <button
-              onClick={downloadPDF}
-              className="bg-blue-500 mt-8 text-white px-4 py-2 rounded"
-            >
-              Download PDF
-            </button>
+        </div>
+        <button  onClick={downloadPdf}
+  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+>
+  Download PDF
+</button>
 
             
           </div>
           </>
-        )}
+        )} */}
+          <button  onClick={downloadPdf}
+  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+>
+  Download PDF
+</button>
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ const Newpayment = ({ userdata }) => {
   const [registrationData, setRegistrationData] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [submittedData, setSubmittedData] = useState([]); // Store the submitted data
-
+  const [showConfirmationPopup, setShowConfirmationPopup] = useState(false); 
   useEffect(() => {
     const id = router.query.id;
     if (id && !isNaN(id) && Number(id) > 0) {
@@ -73,37 +73,68 @@ const Newpayment = ({ userdata }) => {
   };
 
   const handleSaveData = () => {
-    const isValid = subjectColumns.every((subjectColumn) => 
-      subjectColumn.columns.every((column) => 
-        column.date?.trim() && column.amount?.trim() && column.mode?.trim()
-      )
-    );
+    let hasErrors = false;
+
+    subjectColumns.forEach((subjectColumn, subjectIndex) => {
+      subjectColumn.columns.forEach((column) => {
+        // Check if amount is filled and mode is not selected
+        if (column.amount.trim() && !column.mode.trim()) {
+          toast.error(`For ${registrationData.subjects[subjectIndex].subjectName}: Mode of Payment is required when Amount is filled.`);
+          hasErrors = true;
+        }
+      });
+    });
   
-    if (!isValid) {
-      toast.error('Please fill all required fields before submitting.');
+    if (hasErrors) {
+      return; // Stop execution if there are errors
+    }
+  
+    // Validate amount against remainingFees
+    let isAmountValid = true;
+    subjectColumns.forEach((subjectColumn, subjectIndex) => {
+      const totalPaid = Array.isArray(registrationData.subjects[subjectIndex].columns) 
+        ? registrationData.subjects[subjectIndex].columns.reduce((total, col) => total + parseFloat(col.amount || 0), 0) 
+        : 0;
+      const remainingFees = parseFloat(registrationData.subjects[subjectIndex].totalFees) - totalPaid;
+
+      subjectColumn.columns.forEach((column) => {
+        if (parseFloat(column.amount) > remainingFees) {
+          isAmountValid = false;
+          toast.error(`Amount ${column.amount} exceeds remaining fees ${remainingFees} for subject ${registrationData.subjects[subjectIndex].subjectName}`);
+        }
+      });
+    });
+  
+    if (!isAmountValid) {
       return;
     }
-    if (window.confirm('Are you sure you want to submit the payment details?')) {
+    
+    // Show the confirmation popup
+    setShowConfirmationPopup(true);
+  };
+
+  const handleConfirmation = (action) => {
+    if (action === 'Final') {
       const updatedRegistrationData = { ...registrationData };
-  
+
       updatedRegistrationData.subjects.forEach((subject, subjectIndex) => {
         const columns = subjectColumns[subjectIndex]?.columns || [];
         const nonEmptyColumns = columns.filter((column) => {
           return column.date?.trim() && column.amount?.trim() && column.mode?.trim();
         });
-  
+
         if (!Array.isArray(subject.columns)) {
           subject.columns = [];
         }
-  
+
         subject.columns.push(...nonEmptyColumns);
       });
-  
+
       const cleanedRegistrationData = JSON.parse(JSON.stringify(updatedRegistrationData));
-  
+
       const id = router.query.id;
       const docRef = db.collection('registrations').where("id", "==", Number(id));
-  
+
       docRef
         .get()
         .then((querySnapshot) => {
@@ -137,6 +168,7 @@ const Newpayment = ({ userdata }) => {
           toast.error('Error saving data: ' + error.message);
         });
     }
+    setShowConfirmationPopup(false); // Close the confirmation popup
   };
 
   if (loading) return <p>Loading...</p>;
@@ -223,6 +255,31 @@ const Newpayment = ({ userdata }) => {
             OK
           </button>
         </div>
+
+
+        {showConfirmationPopup && (
+          <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
+            <div className="bg-white p-6 rounded shadow-lg">
+              <h2 className="text-lg font-semibold mb-4">Confirm Submission</h2>
+              <p className="mb-4">Are you sure you want to submit the payment details?</p>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => handleConfirmation('Edit')}
+                  className="bg-yellow-500 text-white px-4 py-2 rounded"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleConfirmation('Final')}
+                  className="bg-blue-500 text-white px-4 py-2 rounded"
+                >
+                  Final
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* Modal Popup */}
         {showPopup && (

@@ -82,11 +82,11 @@ const Reciepts = ({ userdata }) => {
       <div className="bg-gradient-to-b from-sky-400 to-white">
         <h1 className="text-xl font-semibold mb-4 text-center">Receipts</h1>
       </div>
-      <div className='p-6'>
+      <div className='p-6 mb-20'>
         <div className="bg-white p-2 border border-black w-full">
           {studentData.length > 0 ? (
             studentData.map((student, studentIndex) => (
-              <div key={studentIndex}>
+              <div key={studentIndex} className=" p-4 border-b border-gray-600" >
                 <h1 className="font-mono font-bold">
                   Student Name: {student.firstName} {student.middleName} {student.lastName}
                 </h1>

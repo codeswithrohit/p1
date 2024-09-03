@@ -7,6 +7,7 @@ import 'react-toastify/dist/ReactToastify.css'; // Import React Toastify CSS
 const UserManage = () => {
   const [userList, setUserList] = useState([]);
   const [editUserId, setEditUserId] = useState(null);
+  const [editName, setEditName] = useState('');
   const [editFingerprint, setEditFingerprint] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -36,8 +37,9 @@ const UserManage = () => {
   }, []);
 
   // Handle edit button click
-  const handleEditClick = (id, fingerprint) => {
+  const handleEditClick = (id, name, fingerprint) => {
     setEditUserId(id);
+    setEditName(name);
     setEditFingerprint(fingerprint);
     setIsModalOpen(true);
   };
@@ -47,24 +49,26 @@ const UserManage = () => {
     try {
       const db = firebase.firestore();
       await db.collection('users').doc(editUserId).update({
+        name: editName,
         fingerprint: editFingerprint
       });
       
       // Update the local state to reflect changes
       setUserList(userList.map(user => 
-        user.id === editUserId ? { ...user, fingerprint: editFingerprint } : user
+        user.id === editUserId ? { ...user, name: editName, fingerprint: editFingerprint } : user
       ));
       
       // Show success notification
-      toast.success("Fingerprint updated successfully!");
+      toast.success("User data updated successfully!");
       
       // Clear the edit state and close modal
       setEditUserId(null);
+      setEditName('');
       setEditFingerprint('');
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error updating user data: ", error);
-      toast.error("Error updating fingerprint. Please try again.");
+      toast.error("Error updating user data. Please try again.");
     }
   };
 
@@ -82,21 +86,28 @@ const UserManage = () => {
               <p className="text-gray-600 mb-2 text-xs">Fingerprint: {user.fingerprint}</p>
               <p className="text-gray-600 mb-2">Active: {user.active ? 'Yes' : 'No'}</p>
               <button
-                onClick={() => handleEditClick(user.id, user.fingerprint)}
+                onClick={() => handleEditClick(user.id, user.name, user.fingerprint)}
                 className="bg-yellow-500 text-white px-4 py-2 rounded"
               >
-                Edit Fingerprint
+                Edit
               </button>
             </div>
           ))
         )}
       </div>
 
-      {/* Modal for editing fingerprint */}
+      {/* Modal for editing name and fingerprint */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-md max-w-sm w-full">
-            <h2 className="text-2xl font-semibold mb-4">Edit Fingerprint</h2>
+            <h2 className="text-2xl font-semibold mb-4">Edit User</h2>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="border border-gray-300 rounded px-3 py-2 w-full mb-4"
+              placeholder="Enter new name"
+            />
             <input
               type="text"
               value={editFingerprint}
