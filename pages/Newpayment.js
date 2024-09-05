@@ -115,6 +115,8 @@ const Newpayment = ({ userdata }) => {
 
   const handleConfirmation = (action) => {
     if (action === 'Final') {
+      setSubmitting(true); // Start submitting
+
       const updatedRegistrationData = { ...registrationData };
 
       updatedRegistrationData.subjects.forEach((subject, subjectIndex) => {
@@ -142,13 +144,11 @@ const Newpayment = ({ userdata }) => {
           return doc.ref.update(cleanedRegistrationData);
         })
         .then(() => {
-          // Reset columns to empty for new data entry
           const initialColumns = registrationData.subjects.map(() => {
             return { columns: [{ date: '', amount: '', mode: '', received: '' }] };
           });
           setSubjectColumns(initialColumns);
 
-          // Prepare data for popup
           const submitted = updatedRegistrationData.subjects.flatMap((subject, subjectIndex) => {
             return subjectColumns[subjectIndex]?.columns.map((column) => ({
               subjectName: subject.subjectName,
@@ -162,19 +162,29 @@ const Newpayment = ({ userdata }) => {
           setSubmittedData(submitted);
           toast.success('Data saved successfully!');
           
-          setShowPopup(true); // Show the popup with data
+          setShowPopup(true);
+          setSubmitting(false); // End submitting
         })
         .catch((error) => {
           toast.error('Error saving data: ' + error.message);
+          setSubmitting(false); // End submitting
         });
     }
-    setShowConfirmationPopup(false); // Close the confirmation popup
+    setShowConfirmationPopup(false);
   };
+
 
   if (loading) return <p>Loading...</p>;
   
   return (
     <div className='bg-white min-h-screen'>
+        {submitting && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
+          <div className="bg-white p-4 rounded shadow-lg">
+            <p className="text-lg font-semibold">Submitting...</p>
+          </div>
+        </div>
+      )}
       <div className=''>
         <h1 className="text-sm px-8 py-4 font-bold font-mono ">
           Student Name: {registrationData?.firstName} {registrationData?.middleName} {registrationData?.lastName}
