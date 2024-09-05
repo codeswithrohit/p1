@@ -17,7 +17,7 @@ const Header = () => {
   );
 };
 
-const Student = ({ studentData,onDelete }) => {
+const Student = ({ studentData }) => {
 
 
 
@@ -42,11 +42,7 @@ const Student = ({ studentData,onDelete }) => {
       return 'bg-gray-300'; // Default color for cases where data is missing
     }
   };
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this student?')) {
-      onDelete(studentData.id);
-    }
-  };
+ 
   return (
     <div className="flex items-center mb-4">
       <img src={studentData.imageUrl} className='h-16 w-16 rounded-full object-contain mr-8' />
@@ -65,14 +61,7 @@ const Student = ({ studentData,onDelete }) => {
           ))}
         </div>
       </Link>
-      <div className="ml-auto flex space-x-4">
-        <button
-          onClick={handleDelete}
-          className="text-red-500 hover:text-red-700"
-        >
-          <FaTrash size={20} />
-        </button>
-      </div>
+     
     </div>
   );
 };
@@ -110,33 +99,7 @@ function Studentlist() {
 
     fetchData();
   }, []);
-  const handleDelete = async (id) => {
-    console.log("id", id);
-    try {
-      const db = firebase.firestore();
-      
-      // Query documents with the matching ID
-      const querySnapshot = await db.collection('registrations')
-                                   .where("id", "==", id)
-                                   .get();
-      
-      if (!querySnapshot.empty) {
-        // Iterate through matching documents and delete them
-        querySnapshot.forEach(async (doc) => {
-          await doc.ref.delete(); // Use doc.ref to get the document reference
-        });
-  
-        // Update local state
-        setStudentdata(studentdata.filter(student => student.id !== id));
-        toast.success('Student deleted successfully');
-      } else {
-        toast.error('No matching student found');
-      }
-    } catch (error) {
-      console.error('Error deleting document:', error);
-      toast.error('Failed to delete student');
-    }
-  };
+ 
   
 
 
@@ -147,6 +110,11 @@ function Studentlist() {
   const filteredStudents = studentdata.filter((student) => {
     const fullName = `${student.firstName} ${student.middleName} ${student.lastName}`.toLowerCase();
     return fullName.includes(searchTerm.toLowerCase());
+  });
+  const sortedStudents = filteredStudents.sort((a, b) => {
+    const nameA = `${a.firstName} ${a.middleName || ''} ${a.lastName}`.toLowerCase();
+    const nameB = `${b.firstName} ${b.middleName || ''} ${b.lastName}`.toLowerCase();
+    return nameA.localeCompare(nameB);
   });
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -186,8 +154,8 @@ function Studentlist() {
             />
           </div>
           {/* Display filtered students */}
-          {filteredStudents.map((student, index) => (
-            <Student key={student.id} studentData={student} onDelete={handleDelete} />
+          {sortedStudents.map((student, index) => (
+            <Student key={student.id} studentData={student}  />
           ))}
         </div>
 

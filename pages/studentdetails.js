@@ -18,13 +18,14 @@ const IconWithLabel = ({ icon, label, onClick }) => {
   );
 };
 
-const Adminregistrattionfooter = ({ onEdit, handleQRCode, handleNewPayment, adminAuthentication, userAuthentication }) => {
+const Adminregistrattionfooter = ({ onEdit, handleQRCode, handleNewPayment, adminAuthentication, userAuthentication,onDelete }) => {
     return (
       <div className="fixed bottom-12 left-0 right-0 bg-white dark:bg-white p-4 flex justify-around">
         {adminAuthentication && (
           <>
             <IconWithLabel icon={<FaUserEdit size={24} style={{ color: 'blue' }} />} label="Edit" onClick={onEdit} />
             <IconWithLabel icon={<FaQrcode size={24} style={{ color: 'blue' }} />} label="QR Code" onClick={handleQRCode} />
+            <IconWithLabel icon={<FaTrash size={24} style={{ color: 'red' }} />} label="Delete" onClick={onDelete} />
           </>
         )}
         {(adminAuthentication || userAuthentication) && (
@@ -320,6 +321,29 @@ const StudentDetails = ({adminAuthentication,userAuthentication}) => {
 
     fetchData();
 }, []);
+
+
+const handleDelete = async () => {
+  const confirmed = window.confirm('Are you sure you want to delete this student?');
+  if (confirmed) {
+    try {
+      const querySnapshot = await db.collection('registrations')
+        .where('id', '==', Number(id))
+        .get();
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        await doc.ref.delete();
+        toast.success('Student deleted successfully!');
+        router.push('/studentlist');
+      } else {
+        toast.error('No student found with the specified ID');
+      }
+    } catch (error) {
+      toast.error('Error deleting student');
+      console.error('Error deleting student:', error);
+    }
+  }
+};
 
   if (loading) return <div>Loading...</div>;
   if (!student) return <div>No student details found.</div>;
@@ -622,6 +646,7 @@ const StudentDetails = ({adminAuthentication,userAuthentication}) => {
   handleNewPayment={handleNewPayment}
   adminAuthentication={adminAuthentication}
   userAuthentication={userAuthentication}
+  onDelete={handleDelete}
 />
 
       <ToastContainer />
