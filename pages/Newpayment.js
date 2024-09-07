@@ -14,6 +14,8 @@ const Newpayment = ({ userdata }) => {
   const [showPopup, setShowPopup] = useState(false);
   const [submittedData, setSubmittedData] = useState([]); // Store the submitted data
   const [showConfirmationPopup, setShowConfirmationPopup] = useState(false); 
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
     const id = router.query.id;
     if (id && !isNaN(id) && Number(id) > 0) {
