@@ -53,12 +53,28 @@ const TransactionRecord = () => {
           const data = doc.data();
           allRegistrationData.push(data);
         });
-        setRegistrationData(allRegistrationData);
+
+        // Calculate "remain" for each registration data entry
+        const sortedData = allRegistrationData.map(student => {
+          const subjectsData = student.subjects.find(subject => subject.subjectName === selectedSubject);
+          if (subjectsData) {
+            const totalFees = parseFloat(subjectsData.totalFees || 0);
+            const totalSubmitted = (subjectsData.columns || []).reduce((acc, column) => acc + parseFloat(column.amount || 0), 0);
+            const remain = totalFees - totalSubmitted;
+            return { ...student, remain }; // Add the "remain" field to each student
+          }
+          return { ...student, remain: 0 };
+        });
+
+        // Sort by "remain" in descending order
+        sortedData.sort((a, b) => b.remain - a.remain);
+
+        setRegistrationData(sortedData);
       })
       .catch((error) => {
         console.error('Error getting documents:', error);
       });
-  }, []);
+  }, [selectedSubject]);
 
   useEffect(() => {
     if (selectedSubject) {
@@ -205,6 +221,7 @@ const TransactionRecord = () => {
     // Download the PDF with the new file name
     pdfMake.createPdf(docDefinition).download(fileName);
   };
+
   
   
   
