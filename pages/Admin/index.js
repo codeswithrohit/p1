@@ -58,7 +58,14 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="bg-white w-full min-h-screen flex flex-col md:flex-row md:flex-wrap p-4">
+    <div   style={{
+      backgroundImage: `url('bg1.jpg')`,
+      backgroundSize: 'contain', // Changed from 'contain' to 'cover' for full background
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+      backgroundAttachment: 'fixed', // Keeps the background fixed when scrolling
+      zIndex: 1, // Ensures that the background is behind other content
+    }} className=" w-full min-h-screen flex flex-col md:flex-row md:flex-wrap p-4">
       {users.length > 0 ? (
         users.map((user) => (
           <div key={user.id} className="md:w-1/3 p-2">

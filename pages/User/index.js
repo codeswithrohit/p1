@@ -8,7 +8,14 @@ const Index = ({ userdata }) => {
   const user = userdata && userdata.length > 0 ? userdata[0] : null;
 
   return (
-    <div className="flex flex-col justify-between h-screen p-6 bg-gray-100">
+    <div style={{
+      backgroundImage: `url('bg1.jpg')`,
+      backgroundSize: 'contain', // Changed from 'contain' to 'cover' for full background
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+      backgroundAttachment: 'fixed', // Keeps the background fixed when scrolling
+      zIndex: 1, // Ensures that the background is behind other content
+    }} className="flex flex-col justify-between h-screen p-6 bg-gray-100">
       {/* Top Section: User Image and Name */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">

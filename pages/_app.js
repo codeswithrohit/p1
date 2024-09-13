@@ -212,9 +212,22 @@ export default function App({ Component, pageProps }) {
   }
 
   return (
-    <>
-      <Component {...pageProps} user={user} adminAuthentication={adminAuthentication} userAuthentication={userAuthentication} userdata={userdata} />
-      <Button/>
-    </>
+    <div
+    className="bg-white "  // Add relative and min-h-screen to ensure the full screen and correct positioning
+  
+  >
+    <div className="relative z-10 p-4">  {/* Wrap content in a relative container with proper z-index */}
+      <Component
+        {...pageProps}
+        user={user}
+        adminAuthentication={adminAuthentication}
+        userAuthentication={userAuthentication}
+        userdata={userdata}
+      />
+      <Button />
+    </div>
+  </div>
+  
+  
   );
 }

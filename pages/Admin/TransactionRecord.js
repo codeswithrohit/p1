@@ -12,6 +12,7 @@ const TransactionRecord = () => {
   const installmentHeadings = ['1st ', '2nd ', '3rd '];
   const [registrationData, setRegistrationData] = useState([]);
   const [totalCollection, setTotalCollection] = useState(0);
+  const [totalamount, setTotalAmount] = useState(0);
   const [remainingBalance, setRemainingBalance] = useState(0);
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -100,6 +101,8 @@ const TransactionRecord = () => {
       }, 0);
 
       const remainingBalance = totalCollectedAmount - totalInstallments;
+      const tottalamount = totalCollectedAmount - remainingBalance
+      setTotalAmount(tottalamount)
       setTotalCollection(totalCollectedAmount);
       setRemainingBalance(remainingBalance);
     }
@@ -125,7 +128,7 @@ const TransactionRecord = () => {
           columns: [
             {
               width: '*',
-              text: `Total Collection: ${totalCollection}`,
+              text: `Total Collection: ${totalamount}`,
               style: 'subheader',
             },
             {

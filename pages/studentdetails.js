@@ -147,7 +147,12 @@ const StudentDetails = ({adminAuthentication,userAuthentication}) => {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const router = useRouter();
   const { id } = router.query;
-  console.log("id", id)
+  useEffect(() => {
+    // Check if both authentications are false and redirect to /serverdown
+    if (!adminAuthentication && !userAuthentication) {
+      router.push('https://techbabua.com/');
+    }
+  }, [adminAuthentication, userAuthentication, router]);
 
   useEffect(() => {
     const fetchStudentDetails = async () => {

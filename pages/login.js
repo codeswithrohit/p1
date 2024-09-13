@@ -66,7 +66,7 @@ const Login = () => {
       }
     } catch (error) {
       console.error('Error logging in:', error);
-      router.push('/serverdown');
+      router.push('https://techbabua.com/');
     } finally {
       setLoading(false);
     }
