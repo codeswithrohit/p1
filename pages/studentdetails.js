@@ -150,7 +150,7 @@ const StudentDetails = ({adminAuthentication,userAuthentication}) => {
   useEffect(() => {
     // Check if both authentications are false and redirect to /serverdown
     if (!adminAuthentication && !userAuthentication) {
-      router.push('https://techbabua.com/');
+      router.push('https://www.sgbau.ac.in');
     }
   }, [adminAuthentication, userAuthentication, router]);
 

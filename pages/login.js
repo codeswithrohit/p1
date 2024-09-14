@@ -66,7 +66,7 @@ const Login = () => {
       }
     } catch (error) {
       console.error('Error logging in:', error);
-      router.push('https://techbabua.com/');
+      router.push('https://www.sgbau.ac.in');
     } finally {
       setLoading(false);
     }
