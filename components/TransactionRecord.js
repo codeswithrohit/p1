@@ -64,9 +64,6 @@ const TransactionRecordPage = () => {
     const filterData = () => {
       let data = registrationData;
 
-      // Log initial registration data
-      console.log('Initial Registration Data:', data);
-
       // Filter by selected subject
       if (selectedSubjects.length > 0) {
         data = data.map((student) => ({
@@ -74,8 +71,6 @@ const TransactionRecordPage = () => {
           subjects: student.subjects.filter((subject) => selectedSubjects.includes(subject.subjectName)),
         })).filter((student) => student.subjects.length > 0);
       }
-      // Log data after subject filtering
-      console.log('Data After Subject Filtering:', data);
 
       // Filter by selected mode
       if (selectedMode && selectedMode !== 'All') {
@@ -88,19 +83,10 @@ const TransactionRecordPage = () => {
         })).filter((student) => student.subjects.length > 0);
       }
 
-      // Log data after mode filtering
-      console.log('Data After Mode Filtering:', data);
-
       // Filter by date range
       if (fromDateTime && toDateTime) {
         const fromDate = moment(fromDateTime, 'YYYY-MM-DDTHH:mm').toDate();
         const toDate = moment(toDateTime, 'YYYY-MM-DDTHH:mm').toDate();
-
-        // Log selected date range
-        console.log('Selected Date Range:', {
-          fromDate: moment(fromDate).format('DD/MM/YYYY HH:mm:ss'),
-          toDate: moment(toDate).format('DD/MM/YYYY HH:mm:ss')
-        });
 
         data = data.map((student) => ({
           ...student,
@@ -108,73 +94,74 @@ const TransactionRecordPage = () => {
             ...subject,
             columns: subject.columns ? subject.columns.filter((column) => {
               const columnDate = moment(column.date, 'DD/MM/YYYY HH:mm:ss').toDate();
-
-              // Log each column date and its comparison result
-              console.log('Column Date:', moment(column.date, 'DD/MM/YYYY HH:mm:ss').format('DD/MM/YYYY HH:mm:ss'));
-              console.log('Is Column Date Within Range:', columnDate >= fromDate && columnDate <= toDate);
-
               return columnDate >= fromDate && columnDate <= toDate;
             }) : [],
           })).filter((subject) => subject.columns.length > 0),
         })).filter((student) => student.subjects.length > 0);
-
-        // Log data after date range filtering
-        console.log('Data After Date Range Filtering:', data);
       }
 
+      // Sort subjects by the newest column date first
+      data = data.map((student) => ({
+        ...student,
+        subjects: student.subjects.map((subject) => ({
+          ...subject,
+          columns: subject.columns
+            ? subject.columns.sort((a, b) => moment(b.date, 'DD/MM/YYYY HH:mm:ss').toDate() - moment(a.date, 'DD/MM/YYYY HH:mm:ss').toDate())
+            : [],
+        }))
+      }));
+
+      // Sort the whole data array by the newest column date (if available)
+      data = data.sort((a, b) => {
+        const latestA = a.subjects[0]?.columns[0]?.date ? moment(a.subjects[0].columns[0].date, 'DD/MM/YYYY HH:mm:ss').toDate() : new Date(0);
+        const latestB = b.subjects[0]?.columns[0]?.date ? moment(b.subjects[0].columns[0].date, 'DD/MM/YYYY HH:mm:ss').toDate() : new Date(0);
+        return latestB - latestA;
+      });
 
       const receivedTotals = {};
-  data.forEach((student) => {
-    student.subjects.forEach((subject) => {
-      if (subject.columns && Array.isArray(subject.columns)) {
-        subject.columns.forEach((column) => {
-          if (!receivedTotals[column.received]) {
-            receivedTotals[column.received] = { Cash: 0, Online: 0, Total: 0 };
+      data.forEach((student) => {
+        student.subjects.forEach((subject) => {
+          if (subject.columns && Array.isArray(subject.columns)) {
+            subject.columns.forEach((column) => {
+              if (!receivedTotals[column.received]) {
+                receivedTotals[column.received] = { Cash: 0, Online: 0, Total: 0 };
+              }
+              receivedTotals[column.received][column.mode] += parseFloat(column.amount);
+              receivedTotals[column.received].Total += parseFloat(column.amount);
+            });
           }
-          receivedTotals[column.received][column.mode] += parseFloat(column.amount);
-          receivedTotals[column.received].Total += parseFloat(column.amount);
         });
-      }
-    });
-  });
+      });
 
       setReceivedTotals(receivedTotals);
-      
-      console.log('Filtered Data:', data);
-      console.log('Received Totals:', receivedTotals);
+      setFilteredData(data);
+      setIsDataVisible(data.length > 0);
 
-      console.log('Filtered Data:', data); // Log the filtered data to the console
+      const calculateTotalCollection = (data, mode) => {
+        return data.reduce((total, student) => {
+          student.subjects.forEach((subject) => {
+            if (subject.columns) {
+              const payments = mode === 'All'
+                ? subject.columns
+                : subject.columns.filter((column) => column.mode === mode);
+              const totalAmount = payments.reduce((acc, column) => acc + parseFloat(column.amount || 0), 0);
+              total += totalAmount;
+            }
+          });
+          return total;
+        }, 0);
+      };
 
-      return data;
+      let totalOnline = calculateTotalCollection(data, 'Online');
+      let totalOffline = calculateTotalCollection(data, 'Cash');
+      const totalBalance = totalOnline + totalOffline;
+
+      setTotalCollectionOnline(totalOnline);
+      setTotalCollectionOffline(totalOffline);
+      setRemainingBalance(totalBalance);
     };
 
     const data = filterData();
-    setFilteredData(data);
-    setIsDataVisible(data.length > 0);
-
- 
-    const calculateTotalCollection = (data, mode) => {
-      return data.reduce((total, student) => {
-        student.subjects.forEach((subject) => {
-          if (subject.columns) {
-            const payments = mode === 'All'
-              ? subject.columns
-              : subject.columns.filter((column) => column.mode === mode);
-            const totalAmount = payments.reduce((acc, column) => acc + parseFloat(column.amount || 0), 0);
-            total += totalAmount;
-          }
-        });
-        return total;
-      }, 0);
-    };
-
-    let totalOnline = calculateTotalCollection(data, 'Online');
-    let totalOffline = calculateTotalCollection(data, 'Cash');
-    const totalBalance = totalOnline + totalOffline;
-
-    setTotalCollectionOnline(totalOnline);
-    setTotalCollectionOffline(totalOffline);
-    setRemainingBalance(totalBalance);
   }, [selectedSubject, selectedSubjects, selectedMode, registrationData, fromDateTime, toDateTime]);
 
 

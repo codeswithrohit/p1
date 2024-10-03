@@ -208,7 +208,7 @@ const Setting = () => {
                 </button>
               </div>
               {activeSubTab === 'addSubject' && (
-                <div className="relative h-96 overflow-y-auto">
+                <div className="relative h-full mb-50 min-h-screen overflow-y-auto">
                   <div className="space-y-2">
                     {subjects.map((subject, index) => (
                       <div key={subject.id || index} className="flex items-center space-x-2 mb-2">
@@ -249,7 +249,7 @@ const Setting = () => {
                 </div>
               )}
               {activeSubTab === 'addCollege' && (
-                <div className="relative h-96 overflow-y-auto">
+                <div className="relative h-full mb-50 min-h-screen overflow-y-auto">
                   <div className="space-y-2">
                     {colleges.map((college, index) => (
                       <div key={college.id || index} className="flex items-center space-x-2 mb-2">
@@ -290,7 +290,7 @@ const Setting = () => {
                 </div>
               )}
               {activeSubTab === 'addBranch' && (
-                <div className="relative h-96 overflow-y-auto">
+                <div className="relative h-full mb-50 min-h-screen overflow-y-auto">
                   <div className="space-y-2">
                     {branches.map((branch, index) => (
                       <div key={branch.id || index} className="flex items-center space-x-2 mb-2">
